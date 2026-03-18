@@ -5,8 +5,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from anthropic import Anthropic
+from dotenv import load_dotenv
+import google.generativeai as genai
 from prompts import get_system_prompt
+
+# Load environment variables
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(title="AI Concept Explainer", version="1.0.0")
@@ -20,12 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Anthropic client
-api_key = os.getenv("ANTHROPIC_API_KEY")
+# Initialize Google Gemini API
+api_key = os.getenv("GEMINI_KEY")
 if not api_key:
-    raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+    raise ValueError("GEMINI_KEY environment variable is not set")
 
-client = Anthropic()
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 # In-memory state store
 state_store = {
@@ -46,17 +51,33 @@ class ChatRequest(BaseModel):
 
 # Helper function to generate stream
 async def generate_stream(messages: List[Dict], system_prompt: str):
-    """Generate streaming response from Claude API"""
+    """Generate streaming response from Google Gemini API"""
     try:
-        with client.messages.stream(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1024,
-            system=system_prompt,
-            messages=messages,
-        ) as stream:
-            for text in stream.text_stream:
+        # Prepare the conversation content
+        contents = []
+        
+        # Add system prompt as first message
+        contents.append(system_prompt)
+        
+        # Add conversation history
+        for msg in messages:
+            contents.append({
+                "role": msg["role"],
+                "parts": [msg["content"]]
+            })
+
+        # Stream from Gemini
+        response = model.generate_content(
+            contents=contents,
+            stream=True
+        )
+
+        # Yield chunks as Server-Sent Events
+        for chunk in response:
+            if chunk.text:
                 # Yield data in Server-Sent Events format
-                yield f"data: {json.dumps({'content': text})}\n\n"
+                yield f"data: {json.dumps({'content': chunk.text})}\n\n"
+
     except Exception as e:
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
@@ -84,7 +105,7 @@ async def chat(request: ChatRequest):
             style=state_store["explanation_style"]
         )
 
-        # Prepare messages for Claude
+        # Prepare messages for Gemini
         messages = [
             {"role": msg.role, "content": msg.content}
             for msg in request.conversation_history
