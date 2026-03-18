@@ -23,15 +23,15 @@ const TopicIndicator = ({ topic, style }) => {
   };
 
   return (
-    <div className="flex justify-center gap-3 py-4 animate-fadeIn">
+    <div className="flex items-center gap-2 animate-fadeIn flex-wrap justify-end">
       {topic && (
-        <div className="px-4 py-2 rounded-full bg-indigo-500 text-white text-sm font-medium shadow-sm transition-all duration-300 hover:shadow-md">
-          📚 {topic}
+        <div className="px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+          Topic: {topic}
         </div>
       )}
       {style && (
-        <div className="px-4 py-2 rounded-full bg-indigo-500 text-white text-sm font-medium shadow-sm transition-all duration-300 hover:shadow-md">
-          {getStyleEmoji(style)} {style.charAt(0).toUpperCase() + style.slice(1)}
+        <div className="px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+          Style: {getStyleEmoji(style)} {style.charAt(0).toUpperCase() + style.slice(1)}
         </div>
       )}
     </div>

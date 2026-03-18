@@ -47,7 +47,7 @@ export async function streamChat({
     };
 
     // Send POST request to backend
-    const response = await fetch('http://localhost:8000/chat', {
+    const response = await fetch('http://localhost:3002/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -202,7 +202,7 @@ export async function streamChatWithCancel({
     };
 
     // Send POST request with optional abort signal
-    const response = await fetch('http://localhost:8000/chat', {
+    const response = await fetch('http://localhost:3002/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

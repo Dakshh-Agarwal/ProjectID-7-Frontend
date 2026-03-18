@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,8 +10,8 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  @apply bg-slate-50 text-gray-900;
+  font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  @apply bg-[#f7f7f3] text-slate-900;
 }
 
 /* Remove default scrollbar on body */
@@ -30,16 +30,88 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  @apply bg-slate-100 rounded-full;
+  @apply bg-slate-200 rounded-full;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  @apply bg-indigo-400 rounded-full hover:bg-indigo-500 transition-colors;
+  @apply bg-slate-400 rounded-full hover:bg-slate-500 transition-colors;
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #818cf8 #f1f5f9;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
+/* App frame */
+.bg-app {
+  background:
+    radial-gradient(1200px 500px at 20% -10%, rgba(15, 23, 42, 0.05), transparent),
+    radial-gradient(1000px 420px at 80% -20%, rgba(71, 85, 105, 0.05), transparent),
+    #f7f7f3;
+}
+
+.app-topbar {
+  @apply border-b border-slate-200/80 bg-white/80 backdrop-blur-md;
+}
+
+.app-topbar-inner {
+  @apply max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4;
+}
+
+.app-brand {
+  @apply flex items-center gap-2;
+}
+
+.app-brand-dot {
+  @apply w-2.5 h-2.5 rounded-full bg-slate-900;
+}
+
+.app-title {
+  @apply text-lg font-semibold tracking-tight text-slate-900;
+}
+
+.app-main {
+  @apply flex-1 min-h-0;
+}
+
+.chat-scroll-area {
+  @apply h-full overflow-y-auto px-4;
+}
+
+.chat-scroll-inner {
+  @apply max-w-4xl mx-auto py-6 pb-32;
+}
+
+.assistant-row {
+  @apply flex items-start gap-3 mb-4;
+}
+
+.assistant-avatar {
+  @apply w-7 h-7 rounded-md bg-slate-900 text-white text-[10px] font-semibold tracking-wide flex items-center justify-center mt-1 flex-shrink-0;
+}
+
+.assistant-bubble {
+  @apply flex-1 px-4 py-3 rounded-2xl rounded-tl-md bg-white border border-slate-200 text-slate-800 shadow-sm;
+}
+
+.user-row {
+  @apply flex justify-end mb-4;
+}
+
+.user-bubble {
+  @apply max-w-[80%] lg:max-w-2xl px-4 py-3 rounded-2xl rounded-tr-md bg-slate-900 text-white shadow-sm;
+}
+
+.composer-shell {
+  @apply fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#f7f7f3] via-[#f7f7f3] to-transparent;
+}
+
+.composer-inner {
+  @apply max-w-4xl mx-auto px-4 pb-5 pt-4;
+}
+
+.composer-wrap {
+  @apply flex items-center gap-2 p-2 rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-300/30;
 }
 
 /* Custom animations */
@@ -151,17 +223,6 @@ body {
   /* Input focus ring */
   .input-focus {
     @apply focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50;
-  }
-}
-
-/* Dark mode support (optional) */
-@media (prefers-color-scheme: dark) {
-  body {
-    @apply bg-slate-950 text-slate-50;
-  }
-
-  .card {
-    @apply bg-slate-900 border-slate-800;
   }
 }
 

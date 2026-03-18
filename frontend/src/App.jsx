@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import ChatWindow from './components/ChatWindow';
 import InputBar from './components/InputBar';
 import TopicIndicator from './components/TopicIndicator';
@@ -14,17 +14,43 @@ function App() {
     conversationHistory,
     currentTopic,
     explanationStyle,
-    isLoading: sessionLoading,
     addMessage,
+    getAPIFormattedHistory,
     setCurrentTopic,
     setExplanationStyle,
-    getAPIFormattedHistory,
   } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
   const [currentStreamingContent, setCurrentStreamingContent] = useState('');
-  const [lastMessageType, setLastMessageType] = useState(null);
+
+  const extractTopicFromInput = (input) => {
+    const raw = (input || '').trim().toLowerCase();
+    if (!raw) return null;
+
+    const greetings = new Set(['hi', 'hello', 'hey', 'yo', 'hii', 'heyy']);
+    if (greetings.has(raw)) return null;
+
+    let text = raw;
+    const prefixes = ['explain me', 'explain', 'tell me about', 'what is', 'describe', 'teach me'];
+    for (const prefix of prefixes) {
+      if (text.startsWith(prefix)) {
+        text = text.slice(prefix.length).trim();
+        break;
+      }
+    }
+
+    const stopWords = new Set(['me', 'please', 'about', 'the', 'a', 'an']);
+    const cleaned = text
+      .split(' ')
+      .filter(Boolean)
+      .filter((word) => !stopWords.has(word))
+      .join(' ')
+      .trim();
+
+    if (!cleaned || greetings.has(cleaned)) return null;
+    return cleaned;
+  };
 
   // Handle message send
   const handleSendMessage = async (userInput) => {
@@ -32,6 +58,11 @@ function App() {
 
     // Add user message to history
     addMessage('user', userInput, 'explanation', null);
+
+    const detectedTopic = extractTopicFromInput(userInput);
+    if (detectedTopic) {
+      setCurrentTopic(detectedTopic);
+    }
 
     // Start loading
     setIsLoading(true);
@@ -51,24 +82,61 @@ function App() {
           setCurrentStreamingContent((prev) => prev + chunk);
         },
         onDone: (fullResponse) => {
-          // Determine message type based on response content
+          // Try to parse response as JSON (from intent detector)
           let messageType = 'explanation';
-          if (fullResponse.toLowerCase().includes('question') && 
-              fullResponse.toLowerCase().includes('correct') === false) {
-            messageType = 'check_question';
-            setShowSkip(true);
-          } else if (fullResponse.toLowerCase().includes('correct') || 
-                     fullResponse.toLowerCase().includes('misconception')) {
-            messageType = 'evaluation';
-            setShowSkip(false);
-          } else {
-            setShowSkip(false);
+          let displayContent = fullResponse;
+          
+          try {
+            const parsed = JSON.parse(fullResponse);
+            
+            // If this looks like intent detector response
+            if (parsed.style !== undefined) {
+              messageType = 'intent_detection';
+              // Extract detected style and set it
+              if (parsed.style && parsed.style !== 'null') {
+                setExplanationStyle(parsed.style);
+              }
+              // Show user-friendly message instead of raw JSON
+              displayContent = parsed.clarifying_question || 
+                              `I'll explain this in a ${parsed.style} style. What would you like to learn about?`;
+            }
+            // If this looks like explainer response
+            else if (parsed.explanation !== undefined) {
+              messageType = 'explanation';
+              displayContent = parsed.explanation;
+            }
+            // If this looks like check question response
+            else if (parsed.question !== undefined) {
+              messageType = 'check_question';
+              setShowSkip(true);
+              displayContent = parsed.question;
+            }
+            // If this looks like evaluator response
+            else if (parsed.correct !== undefined) {
+              messageType = 'evaluation';
+              setShowSkip(false);
+              displayContent = parsed.correct 
+                ? "Great! You understood correctly!" 
+                : (parsed.re_explanation || "Let me clarify that for you.");
+            }
+          } catch {
+            // If not JSON, check content for message type
+            if (fullResponse.toLowerCase().includes('question') && 
+                fullResponse.toLowerCase().includes('correct') === false) {
+              messageType = 'check_question';
+              setShowSkip(true);
+            } else if (fullResponse.toLowerCase().includes('correct') || 
+                       fullResponse.toLowerCase().includes('misconception')) {
+              messageType = 'evaluation';
+              setShowSkip(false);
+            } else {
+              setShowSkip(false);
+            }
+            displayContent = fullResponse;
           }
           
-          setLastMessageType(messageType);
-          
           // Add assistant message to history
-          addMessage('assistant', fullResponse, messageType, null);
+          addMessage('assistant', displayContent, messageType, null);
           setCurrentStreamingContent('');
           setIsLoading(false);
         },
@@ -114,26 +182,21 @@ function App() {
   ];
 
   return (
-    <div className="h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col max-w-4xl mx-auto">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-all duration-300">
-        <div className="px-6 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🧠</span>
-              <h1 className="text-2xl font-bold">ConceptAI</h1>
-            </div>
+    <div className="h-screen bg-app text-slate-900 flex flex-col">
+      <header className="app-topbar">
+        <div className="app-topbar-inner">
+          <div className="app-brand">
+            <span className="app-brand-dot" aria-hidden="true"></span>
+            <h1 className="app-title">ConceptAI</h1>
           </div>
-
-          {/* Topic and Style Indicators */}
           <TopicIndicator topic={currentTopic} style={explanationStyle} />
         </div>
       </header>
 
-      {/* Chat Window */}
-      <ChatWindow messages={displayMessages} isLoading={isLoading} />
+      <main className="app-main">
+        <ChatWindow messages={displayMessages} isLoading={isLoading} />
+      </main>
 
-      {/* Input Bar */}
       <InputBar
         onSend={handleSendMessage}
         onSkip={handleSkip}

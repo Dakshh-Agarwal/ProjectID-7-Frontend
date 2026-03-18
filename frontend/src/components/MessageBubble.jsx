@@ -44,11 +44,9 @@ const MessageBubble = ({ role, content, type = 'explanation', visualization = nu
   // User message styles
   if (isUser) {
     return (
-      <div className="flex justify-end mb-4 animate-slideRight">
-        <div
-          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl rounded-br-sm text-white shadow-md transition-all duration-300 ${typeStyles.bg}`}
-        >
-          <p className="text-sm lg:text-base leading-relaxed">{content}</p>
+      <div className="user-row animate-slideRight">
+        <div className="user-bubble">
+          <p className="text-sm lg:text-base leading-relaxed whitespace-pre-wrap">{content}</p>
         </div>
       </div>
     );
@@ -57,11 +55,11 @@ const MessageBubble = ({ role, content, type = 'explanation', visualization = nu
   // Assistant message with different type styles
   if (type === 'check_question') {
     return (
-      <div className="flex gap-3 mb-4 animate-slideLeft">
-        <div className="flex-shrink-0 text-2xl">🧠</div>
-        <div className={`flex-1 px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm transition-all duration-300 ${typeStyles.bg} ${typeStyles.border}`}>
+      <div className="assistant-row animate-slideLeft">
+        <div className="assistant-avatar">AI</div>
+        <div className={`assistant-bubble ${typeStyles.bg} ${typeStyles.border}`}>
           <p className={`text-xs font-semibold mb-2 ${typeStyles.labelColor}`}>{typeStyles.label}</p>
-          <p className="text-sm lg:text-base text-gray-900 leading-relaxed">{content}</p>
+          <p className="text-sm lg:text-base text-slate-900 leading-relaxed whitespace-pre-wrap">{content}</p>
         </div>
       </div>
     );
@@ -69,11 +67,11 @@ const MessageBubble = ({ role, content, type = 'explanation', visualization = nu
 
   // Regular assistant message
   return (
-    <div className="flex gap-3 mb-4 animate-slideLeft">
-      <div className="flex-shrink-0 text-2xl">🧠</div>
-      <div className="flex-1">
-        <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-white shadow-sm transition-all duration-300 hover:shadow-md">
-          <p className="text-sm lg:text-base text-gray-800 leading-relaxed">{content}</p>
+    <div className="assistant-row animate-slideLeft">
+      <div className="assistant-avatar">AI</div>
+      <div className="flex-1 min-w-0">
+        <div className="assistant-bubble">
+          <p className="text-sm lg:text-base text-slate-800 leading-relaxed whitespace-pre-wrap">{content}</p>
         </div>
         {visualization && (
           <div className="mt-3">
