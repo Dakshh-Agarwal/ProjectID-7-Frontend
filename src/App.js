@@ -58,7 +58,10 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_input: userInput,
-          conversation_history: [...messages, userMessage],
+          conversation_history: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
           is_skip: false,
         }),
       });
@@ -109,8 +112,8 @@ function App() {
       // After stream ends, check for check question marker
       if (fullText.includes("|||CHECK|||")) {
         const parts = fullText.split("|||CHECK|||");
-        const explanation = parts[0].trim();
-        const checkPart = parts[1].split("|||END|||")[0].trim();
+        const explanation = (parts[0] || "").trim();
+        const checkQuestion = (parts[1] || "").replace("|||END|||", "").trim();
 
         setMessages((prev) => {
           const newMessages = [...prev];
@@ -120,18 +123,36 @@ function App() {
             content: explanation,
             type: "explanation",
           };
-          // Add the check question
-          newMessages.push({
-            role: "assistant",
-            content: checkPart,
-            type: "check_question",
-          });
           return newMessages;
         });
 
-        setShowSkip(true);
-      } else if (!fullText.trim()) {
-        addAssistantMessage("I did not receive any content from the backend.", "explanation");
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: checkQuestion,
+              type: "check_question",
+            },
+          ]);
+          setShowSkip(true);
+        }, 500);
+      } else {
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          if (newMessages[newMessages.length - 1]?.role === "assistant") {
+            newMessages[newMessages.length - 1] = {
+              role: "assistant",
+              content: fullText.trim(),
+              type: "explanation",
+            };
+          }
+          return newMessages;
+        });
+
+        if (!fullText.trim()) {
+          addAssistantMessage("I did not receive any content from the backend.", "explanation");
+        }
       }
     } catch (error) {
       console.error("Error:", error);
@@ -154,7 +175,10 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_input: "",
-          conversation_history: messages,
+          conversation_history: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
           is_skip: true,
         }),
       });
@@ -174,7 +198,6 @@ function App() {
       const decoder = new TextDecoder();
       let fullText = "";
 
-      // eslint-disable-next-line no-loop-func
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -208,7 +231,10 @@ function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             user_input: userInput,
-            conversation_history: [...messages, userMessage],
+            conversation_history: [...messages, userMessage].map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
             is_skip: false,
           }),
         });
@@ -218,44 +244,20 @@ function App() {
           throw new Error(errorText || `Request failed with status ${response.status}`);
         }
 
-        if (!response.body) {
-          const text = await response.text();
-          addAssistantMessage(text?.trim() || "No response received.", "explanation");
-          setShowSkip(false);
-          return;
-        }
+        const fullText = (await response.text()).trim();
+        const lower = fullText.toLowerCase();
+        const isCorrect = lower.includes("got it") || lower.includes("great job") || lower.includes("correct");
+        const isWrong = lower.includes("revisit") || lower.includes("not quite") || !isCorrect;
+        const messageType = isWrong ? "evaluation_wrong" : "evaluation_correct";
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = "";
-
-        // eslint-disable-next-line no-loop-func
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          fullText += decoder.decode(value);
-        }
-
-        // Parse the evaluation response
-        try {
-          const evaluation = JSON.parse(
-            fullText.replace(/```json/g, "").replace(/```/g, "").trim()
-          );
-
-          const messageType = evaluation.correct
-            ? "evaluation_correct"
-            : "evaluation_wrong";
-
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: fullText, type: messageType },
-          ]);
-        } catch {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: fullText, type: "explanation" },
-          ]);
-        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: fullText || "No response received.",
+            type: messageType,
+          },
+        ]);
 
         setShowSkip(false);
       } catch (error) {

@@ -1,9 +1,30 @@
 export default function MessageBubble({ role, content, type }) {
+  const normalizeContent = () => {
+    const text = typeof content === "string" ? content : "";
+    const trimmed = text.trim();
+
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (typeof parsed?.explanation === "string" && parsed.explanation.trim()) {
+          return parsed.explanation;
+        }
+        return "Sorry, something went wrong";
+      } catch {
+        return "Sorry, something went wrong";
+      }
+    }
+
+    return text;
+  };
+
+  const displayContent = normalizeContent();
+
   if (role === "user") {
     return (
       <div className="flex justify-end">
         <div className="bg-indigo-600 text-white rounded-2xl rounded-br-sm px-4 py-3 max-w-md slide-right text-sm">
-          {content}
+          {displayContent}
         </div>
       </div>
     );
@@ -15,7 +36,7 @@ export default function MessageBubble({ role, content, type }) {
   let tagColor = null;
 
   if (type === "check_question") {
-    contentClasses += " bg-yellow-50 border-l-4 border-yellow-400";
+    contentClasses += " bg-yellow-50 border-l-4 border-yellow-400 mt-2";
     tagContent = "Quick Check 🎯";
     tagColor = "text-yellow-600";
   } else if (type === "evaluation_correct") {
@@ -38,7 +59,7 @@ export default function MessageBubble({ role, content, type }) {
           </span>
         )}
         <div className={contentClasses}>
-          {content}
+          {displayContent}
         </div>
       </div>
     </div>
