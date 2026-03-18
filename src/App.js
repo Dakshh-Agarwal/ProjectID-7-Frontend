@@ -82,23 +82,23 @@ function App() {
       const decoder = new TextDecoder();
       let fullText = "";
 
-      // eslint-disable-next-line no-loop-func
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value);
         fullText += chunk;
+        const snapshotText = fullText;
 
         // Update the last message with accumulated text
         setMessages((prev) => {
           const newMessages = [...prev];
           if (newMessages[newMessages.length - 1]?.role === "assistant") {
-            newMessages[newMessages.length - 1].content = fullText;
+            newMessages[newMessages.length - 1].content = snapshotText;
           } else {
             newMessages.push({
               role: "assistant",
-              content: fullText,
+              content: snapshotText,
               type: "explanation",
             });
           }
