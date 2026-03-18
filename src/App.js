@@ -5,7 +5,7 @@ import "./App.css";
 
 function App() {
   const STORAGE_KEY = "concept_explainer_history";
-  const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8010/chat";
+  const API_URL = process.env.REACT_APP_API_URL || "https://projectid-7-backend.onrender.com/chat";
   
   const [messages, setMessages] = useState(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY);
