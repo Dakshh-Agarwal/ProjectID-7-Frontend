@@ -57,10 +57,14 @@ export async function streamChat({
 
     // Check if response is ok
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.detail || `HTTP ${response.status}: ${response.statusText}`
-      );
+      try {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.detail || `HTTP ${response.status}: ${response.statusText}`
+        );
+      } catch (parseError) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
     }
 
     // Get the response body as a reader

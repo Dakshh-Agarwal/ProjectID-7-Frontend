@@ -24,6 +24,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
   const [currentStreamingContent, setCurrentStreamingContent] = useState('');
+  const [lastMessageType, setLastMessageType] = useState(null);
 
   // Handle message send
   const handleSendMessage = async (userInput) => {
@@ -35,7 +36,6 @@ function App() {
     // Start loading
     setIsLoading(true);
     setCurrentStreamingContent('');
-    setShowSkip(true);
 
     try {
       // Get formatted history for API call
@@ -51,11 +51,26 @@ function App() {
           setCurrentStreamingContent((prev) => prev + chunk);
         },
         onDone: (fullResponse) => {
+          // Determine message type based on response content
+          let messageType = 'explanation';
+          if (fullResponse.toLowerCase().includes('question') && 
+              fullResponse.toLowerCase().includes('correct') === false) {
+            messageType = 'check_question';
+            setShowSkip(true);
+          } else if (fullResponse.toLowerCase().includes('correct') || 
+                     fullResponse.toLowerCase().includes('misconception')) {
+            messageType = 'evaluation';
+            setShowSkip(false);
+          } else {
+            setShowSkip(false);
+          }
+          
+          setLastMessageType(messageType);
+          
           // Add assistant message to history
-          addMessage('assistant', fullResponse, 'explanation', null);
+          addMessage('assistant', fullResponse, messageType, null);
           setCurrentStreamingContent('');
           setIsLoading(false);
-          setShowSkip(false);
         },
         onError: (error) => {
           console.error('Stream error:', error);
