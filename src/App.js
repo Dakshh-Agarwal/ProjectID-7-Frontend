@@ -5,6 +5,7 @@ import "./App.css";
 
 function App() {
   const STORAGE_KEY = "concept_explainer_history";
+  const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8010/chat";
   
   const [messages, setMessages] = useState(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -39,6 +40,10 @@ function App() {
     }
   }, [explanationStyle]);
 
+  const addAssistantMessage = (content, type = "explanation") => {
+    setMessages((prev) => [...prev, { role: "assistant", content, type }]);
+  };
+
   const sendMessage = async (userInput) => {
     if (!userInput.trim()) return;
 
@@ -48,7 +53,7 @@ function App() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -58,10 +63,26 @@ function App() {
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Request failed with status ${response.status}`);
+      }
+
+      if (!response.body) {
+        const text = await response.text();
+        if (text?.trim()) {
+          addAssistantMessage(text.trim(), "explanation");
+        } else {
+          addAssistantMessage("I could not get a response from the server.", "explanation");
+        }
+        return;
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
 
+      // eslint-disable-next-line no-loop-func
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -109,9 +130,15 @@ function App() {
         });
 
         setShowSkip(true);
+      } else if (!fullText.trim()) {
+        addAssistantMessage("I did not receive any content from the backend.", "explanation");
       }
     } catch (error) {
       console.error("Error:", error);
+      addAssistantMessage(
+        `Request failed: ${error?.message || "Unknown error"}. Check backend server and API key.`,
+        "evaluation_wrong"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -122,7 +149,7 @@ function App() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,22 +159,35 @@ function App() {
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Request failed with status ${response.status}`);
+      }
+
+      if (!response.body) {
+        const text = await response.text();
+        addAssistantMessage(text?.trim() || "No response received.", "explanation");
+        return;
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
 
+      // eslint-disable-next-line no-loop-func
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         fullText += decoder.decode(value);
       }
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: fullText, type: "explanation" },
-      ]);
+      addAssistantMessage(fullText || "No response received.", "explanation");
     } catch (error) {
       console.error("Error:", error);
+      addAssistantMessage(
+        `Skip failed: ${error?.message || "Unknown error"}`,
+        "evaluation_wrong"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +203,7 @@ function App() {
       setIsLoading(true);
 
       try {
-        const response = await fetch("http://localhost:8000/chat", {
+        const response = await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -173,10 +213,23 @@ function App() {
           }),
         });
 
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `Request failed with status ${response.status}`);
+        }
+
+        if (!response.body) {
+          const text = await response.text();
+          addAssistantMessage(text?.trim() || "No response received.", "explanation");
+          setShowSkip(false);
+          return;
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullText = "";
 
+        // eslint-disable-next-line no-loop-func
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -207,6 +260,10 @@ function App() {
         setShowSkip(false);
       } catch (error) {
         console.error("Error:", error);
+        addAssistantMessage(
+          `Evaluation failed: ${error?.message || "Unknown error"}`,
+          "evaluation_wrong"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -229,16 +286,16 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 flex items-center justify-between">
-        <span className="text-white font-semibold text-lg">🧠 ConceptAI</span>
-        <div className="flex items-center gap-3">
+      <header className="header">
+        <span className="header-title">🧠 ConceptAI</span>
+        <div className="header-right">
           {currentTopic && (
             <>
-              <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">
+              <span className="pill">
                 {currentTopic}
               </span>
               {explanationStyle && (
-                <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">
+                <span className="pill">
                   {explanationStyle}
                 </span>
               )}
@@ -246,7 +303,7 @@ function App() {
           )}
           <button
             onClick={clearHistory}
-            className="text-white/60 hover:text-white text-xs transition-colors"
+            className="clear-btn"
           >
             Clear
           </button>
@@ -257,7 +314,7 @@ function App() {
       <ChatWindow messages={messages} isLoading={isLoading} />
 
       {/* Input Bar */}
-      <div className="h-20" />
+      <div className="app-bottom-spacer" />
       <InputBar
         onSend={handleSend}
         onSkip={skipQuestion}
